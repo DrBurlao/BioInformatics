@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PCR Master - BurlaSoft</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            padding: 20px;
+            max-width: 900px;
+            margin: auto;
+            background-color: #f9f9f9;
+            border: 1px sólido #ddd;
+            borde-radio: 10px;
+            caja-sombra: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            texto-centro: centro.
+        }
+        h1 {
+            color: #333.
+            margen-inferior: 20px.
+        }
+        p {
+            color: #666.
+            margen-inferior: 20px.
+        }
+        .input-group {
+            display: flex.
+            flex-direction: columna.
+            align-items: centro.
+            justificar-contenido: centro.
+            margen-inferior: 20px.
+        }
+        select, input {
+            padding: 10px.
+            fuente-tamaño: 16px.
+            borde: 1px sólido #ccc.
+            borde-radio: 5px.
+            ancho: 80%.
+            margen-inferior: 10px.
+        }
+        button {
+            padding: 10px.
+            fuente-tamaño: 16px.
+            borde: ninguno.
+            borde-radio: 5px.
+            fondo-color: #4CAF50.
+            color: blanco.
+            cursor: pointer.
+            transición: fondo-color 0.3s.
+            ancho: 80%.
+        }
+        button:hover {
+            fondo-color: #45a049.
+        }
+        .result, .error {
+            fuente-tamaño: 18px.
+            borde: 1px sólido #ddd.
+            borde-radio: 5px.
+            margen-inferior: 20px.
+            padding: 10px.
+        }
+        .result {
+            fondo-color: #e9ffe9.
+            color: #333.
+        }
+        .error {
+            color: rojo.
+            texto-alineación: centro.
+            fondo-color: #ffe9e9.
+        }
+        .chart-container {
+            ancho: 100%.
+            máximo-ancho: 500px.
+            margen: automático.
+            padding: 20px.
+        }
+        canvas {
+            máximo-ancho: 100%.
+        }
+    </style>
+</head>
+<body>
+    <h1>PCR Master</h1>
+    <p>Analyze DNA, RNA, and protein sequences. Calculate molecular mass, GC content, melting temperature, and more. Generate a pie chart to visualize base composition.</p>
+    <div class="input-group">
+        <select id="sequence-type">
+            <option value="dna">DNA</option>
+            <option value="rna">RNA</option>
+            <option value="protein">Protein</option>
+        </select>
+        <input type="file" id="file-input" accept=".txt,.fasta,.csv">
+        <input type="text" id="sequence-input" placeholder="Enter sequence" maxlength="200">
+        <button id="analyze-button">Analyze</button>
+    </div>
+    <div class="error" id="error"></div>
+    <div class="result" id="result"></div>
+    <button onclick="exportResultsToCSV()" style="display: none;" id="csv-button">Export to CSV</button>
+    <button onclick="generatePDF()" style="display: none;" id="pdf-button">Generate PDF</button>
+
+    <div class="chart-container">
+        <canvas id="base-chart"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const nucleotideMasses = {
+            'A': 313.2,
+            'T': 304.2,
+            'U': 306.2,
+            'G': 329.2,
+            'C': 289.2
+        };
+
+        const aminoAcidMasses = {
+            'A': 89.1,
+            'R': 174.2,
+            'N': 132.1,
+            'D': 133.1,
+            'C': 121.2,
+            'E': 147.1,
+            'Q': 146.1,
+            'G': 75.1,
+            'H': 155.2,
+            'I': 131.2,
+            'L': 131.2,
+            'K': 146.2,
+            'M': 149.2,
+            'F': 165.2,
+            'P': 115.1,
+            'S': 105.1,
+            'T': 119.1,
+            'W': 204.2,
+            'Y': 181.2,
+            'V': 117.1
+        };
+
+        function readFile(callback) {
+            const fileInput = document.getElementById("file-input");
+            if (fileInput.files.length === 0) {
+                callback(null);
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result.trim().toUpperCase();
+                    callback(content);
+                };
+                reader.readAsText(fileInput.files[0]);
+            }
+        }
+
+        function isValidSequence(sequence, acidType) {
+            const validBases = acidType === 'dna' ? /^[ATGC]+$/ : /^[AUGC]+$/;
+            const validProteins = /^[ARNDCQEGHILKMFPSTWYV]+$/;
+
+            return acidType === 'protein' ? validProteins.test(sequence) : validBases.test(sequence);
+        }
+
+        function calculateMolecularMass(sequence, acidType) {
+            let totalMass = 0;
+            if (acidType === 'protein') {
+                for (let i = 0; i < sequence.length; i++) {
+                    const aminoAcid = sequence[i];
+                    totalMass += aminoAcidMasses[aminoAcid];
+                }
+            } else {
+                for (let i = 0; i < sequence.length; i++) {
+                    const nucleotide = sequence[i];
+                    totalMass += nucleotideMasses[nucleotide];
+                }
+            }
+            return totalMass.toFixed(2);
+        }
+
+        function calculateGCContent(sequence) {
+            const gCount = sequence.split('G').length - 1;
+            const cCount = sequence.split('C').length - 1;
+            const gcContent = ((gCount + cCount) / sequence.length) * 100;
+            return gcContent.toFixed(2);
+        }
+
+        function calculateMeltingTemperature(sequence) {
+            const aCount = sequence.split('A').length - 1;
+            const tCount = sequence.split('T').length - 1;
+            const gCount = sequence.split('G').length - 1;
+            const cCount = sequence.split('C').length - 1;
+
+            const tm = (2 * (aCount + tCount)) + (4 * (gCount + cCount));
+            
+            return tm.toFixed(1);
+        }
+
+        function getComplementarySequence(sequence, acidType) {
+            const complements = acidType === 'dna'
+                ? { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G' }
+                : { 'A': 'U', 'U': 'A', 'G': 'C', 'C': 'G' };
+
+            let complementarySequence = "";
+            for (let i = 0; i < sequence.length; i++) {
+                const nucleotide = sequence[i];
+                complementarySequence += complements[nucleotide];
+            }
+
+            return complementarySequence;
+        }
+
+        function countDimers(sequence) {
+            let dimers = 0;
+            for (let i = 0; i < sequence.length - 1; i++) {
+                if (sequence[i] === sequence[i + 1]) {
+                    dimers++;
+                }
+            }
+            return dimers;
+        }
+
+        function countCodons(sequence) {
+            const codonCounts = {};
+            for (let i = 0; i <= sequence.length - 3; i += 3) {
+                const codon = sequence.slice(i, i + 3);
+                if (!codonCounts[codon]) {
+                    codonCounts[codon] = 1;
+                } else {
+                    codonCounts[codon]++;
+                }
+            }
+            return codonCounts;
+        }
+
+        function analyzeSequence() {
+            const acidType = document.getElementById("sequence-type").value;
+            const errorDiv = document.getElementById("error");
+            const resultDiv = document.getElementById("result");
+
+            readFile(function(fileContent) {
+                const sequenceInput = document.getElementById("sequence-input").value.toUpperCase();
+                const sequence = fileContent || sequenceInput;
+
+                errorDiv.innerText = ""; // Clear previous errors
+                resultDiv.innerText = ""; // Clear previous results
+
+                if (sequence.length === 0) {
+                    errorDiv.innerText = "Error: The sequence cannot be empty.";
+                    return;
+                }
+
+                if (!isValidSequence(sequence, acidType)) {
+                    errorDiv.innerText = acidType === 'dna'
+                        ? "Error: The sequence contains invalid characters. Use A, T, G, C for DNA."
+                        : acidType === 'rna'
+                            ? "Error: Use A, U, G, C for RNA."
+                            : "Error: Protein sequences must contain valid amino acids.";
+                    return;
+                }
+
+                try {
+                    const totalMass = calculateMolecularMass(sequence, acidType);
+                    const gcContent = calculateGCContent(sequence);
+                    const complementarySequence = getComplementarySequence(sequence, acidType);
+                    const tm = calculateMeltingTemperature(complementarySequence);
+
+                    const dimers = countDimers(sequence);
+                    const codonCounts = countCodons(sequence);
+
+                    let codonInfo = "<strong>Codons Found:</strong><br>";
+                    for (const codon in codonCounts) {
+                        codonInfo += `${codon}: ${codonCounts[codon]} times<br>`;
+                    }
+
+                    const baseCounts = {
+                        'A': (sequence.match(/A/g) || []).length,
+                        'T': (sequence.match(/T/g) || []).length,
+                        'G': (sequence.match(/G/g) || []).length,
+                        'C': (sequence.match(/C/g) || []).length
+                    };
+
+                    resultDiv.innerHTML = `
+                        <strong>Molecular Mass:</strong> ${totalMass} Da<br>
+                        <strong>GC Content:</strong> ${gcContent}%<br>
+                        <strong>Primer Melting Temperature (Tm):</strong> ${tm} °C<br>
+                        <strong>Recommended PCR Program:</strong><br>
+                        - Denaturation: 95°C for 30 seconds<br>
+                        - Annealing: ${tm - 5} to ${tm - 10} °C for 30 seconds<br>
+                        - Extension: 72°C for 30 seconds<br>
+                        - Number of cycles: 25-35<br>
+                        - Final extension: 72°C for 5-10 minutes<br>
+                        <strong>Complementary Sequence:</strong> ${complementarySequence}<br>
+                        <strong>Total Bases in Original Sequence:</strong> ${baseCounts['A'] + baseCounts['T'] + baseCounts['G'] + baseCounts['C']}<br>
+                        <strong>Total Dimers:</strong> ${dimers}<br>
+                        ${codonInfo}`;
+
+                    const chartData = {
+                        labels: ['A', 'T', 'G', 'C'],
+                        datasets: [{
+                            data: [
+                                ((baseCounts['A'] / (baseCounts['A'] + baseCounts['T'] + baseCounts['G'] + baseCounts['C'])) * 100).toFixed(2),
+                                ((baseCounts['T'] / (baseCounts['A'] + baseCounts['T'] + baseCounts['G'] + baseCounts['C'])) * 100).toFixed(2),
+                                ((baseCounts['G'] / (baseCounts['A'] + baseCounts['T'] + baseCounts['G'] + baseCounts['C'])) * 100).toFixed(2),
+                                ((baseCounts['C'] / (baseCounts['A'] + baseCounts['T'] + baseCounts['G'] + baseCounts['C'])) * 100).toFixed(2)
+                            ],
+                            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
+                        }]
+                    };
+
+                    const chartOptions = {
+                        responsive: true,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(tooltipItem, data) {
+                                        const base = data.labels[tooltipItem.dataIndex];
+                                        const percentage = data.datasets[0].data[tooltipItem.dataIndex];
+                                        return `${base}: ${percentage}%`;
+                                    }
+                                }
+                            }
+                        }
+                    };
+
+                    const ctx = document.getElementById("base-chart").getContext("2d");
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: chartData,
+                        options: chartOptions
+                    });
+
+                    document.getElementById("csv-button").style.display = "block";
+                    document.getElementById("pdf-button").style.display = "block";
+
+                } catch (error) {
+                    console.error("An error occurred:", error);
+                    errorDiv.innerText = "Error: An unexpected problem occurred. Please check your input and try again.";
+                }
+            });
+        }
+
+        document.getElementById("analyze-button").addEventListener("click", analyzeSequence);
+
+        function exportResultsToCSV() {
+            const resultDiv = document.getElementById("result");
+            const csvContent = "data:text/csv;charset=utf-8," + resultDiv.innerText.split('<br>').join('\n');
+            const downloadLink = document.createElement("a");
+            downloadLink.href = encodeURI(csvContent);
+            downloadLink.download = "results.csv";
+            downloadLink.click();
+        }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const resultDiv = document.getElementById("result");
+
+            doc.text(resultDiv.innerText, 10, 10);
+            doc.save("results.pdf");
+        }
+    </script>
+</body>
+</html>
