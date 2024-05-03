@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EzANOVA - BurlaSoft</title>
+    <style>
+        #groups input {
+            width: 300px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4e73df;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2e59d9;
+        }
+        #results {
+            padding-top: 10px;
+            margin-top: 10px;
+            border-top: 1px solid #ccc;
+        }
+        #chart {
+            margin-top: 20px;
+            width: 600px;
+            height: 400px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script> <!-- For p-value -->
+    <script>
+        function mean(arr) {
+            return arr.reduce((a, b) => a + b, 0) / arr.length;
+        }
+
+        function sumOfSquares(arr, mean) {
+            return arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0);
+        }
+
+        function addGroup() {
+            const groupContainer = document.getElementById("groups");
+            const newGroup = document.createElement("div");
+            newGroup.innerHTML = `<input type="text" placeholder="Group data separated by commas" aria-label="Group data" />`;
+            groupContainer.appendChild(newGroup);
+        }
+
+        function removeGroup() {
+            const groupContainer = document.getElementById("groups");
+            if (groupContainer.children.length > 1) {
+                groupContainer.removeChild(groupContainer.lastChild);
+            }
+        }
+
+        function exportToCSV(data, filename) {
+            const csvContent = "data:text/csv;charset=utf-8," + data.map(row => row.join(",")).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function calculateAnova() {
+            const groupContainer = document.getElementById("groups");
+            const inputs = Array.from(groupContainer.getElementsByTagName("input"))
+                .map(input => input.value.trim())
+                .filter(val => val.length > 0)
+                .map(val => val.split(',').map(Number));
+
+            if (inputs.some(group => group.some(isNaN))) {
+                alert("Please enter only numbers in the groups.");
+                return;
+            }
+
+            const k = inputs.length;
+            const n = inputs.reduce((total, group) => total + group.length, 0);
+
+            if (k < 2 || n < 3) {
+                alert("You need at least two groups and at least three values in total.");
+                return;
+            }
+
+            const grandMean = mean(inputs.flat());
+
+            let ssBetween = 0;
+            const groupMeans = inputs.map(mean);
+            for (let i = 0; i < k; i++) {
+                ssBetween += inputs[i].length * Math.pow(groupMeans[i] - grandMean, 2);
+            }
+
+            const ssWithin = inputs.reduce((total, group) => total + sumOfSquares(group, mean(group)), 0);
+
+            const dfBetween = k - 1;
+            const dfWithin = n - k;
+
+            const msBetween = ssBetween / dfBetween;
+            const msWithin = ssWithin / dfWithin;
+
+            const fStat = msBetween / msWithin;
+
+            const pValue = 1 - jStat.centralF.cdf(fStat, dfBetween, dfWithin); // For p-value
+
+            const resultsDiv = document.getElementById("results");
+            resultsDiv.innerHTML = `
+                <h2>ANOVA Results</h2>
+                <p>F-statistic: ${fStat.toFixed(2)}</p>
+                <p>p-Value: ${pValue.toFixed(6)}</p>
+                <p>Sum of Squares Between Groups (SSB): ${ssBetween.toFixed(2)}</p>
+                <p>Sum of Squares Within Groups (SSW): ${ssWithin.toFixed(2)}</p>
+                <p>Mean Squares Between Groups (MSB): ${msBetween.toFixed(2)}</p>
+                <p>Mean Squares Within Groups (MSW): ${msWithin.toFixed(2)}</p>
+                <p>Degrees of Freedom Between Groups (dfBetween): ${dfBetween}</p>
+                <p>Degrees of Freedom Within Groups (dfWithin): ${dfWithin}</p>
+                <p>Group Means: ${groupMeans.map((mean, idx) => `Group ${idx + 1}: ${mean.toFixed(2)}`).join(", ")}</p>
+                <button onclick="exportResults('${fStat.toFixed(2)}', '${pValue.toFixed(6)}', '${ssBetween.toFixed(2)}', '${ssWithin.toFixed(2)}', '${msBetween.toFixed(2)}', '${msWithin.toFixed(2)}', '${dfBetween}', '${dfWithin}', groupMeans.map(m => m.toFixed(2)) )">Export to CSV</button>
+            `;
+
+            drawChart(groupMeans);
+        }
+
+        function drawChart(groupMeans) {
+            const ctx = document.getElementById("chart").getContext("2d");
+            const labels = groupMeans.map((_, idx) => `Group ${idx + 1}`);
+            const data = {
+                labels,
+                datasets: [
+                    {
+                        label: "Group Means",
+                        data: groupMeans.map(m => m.toFixed(2)),
+                        backgroundColor: ["#4e73df", "#1cc88a", "#36b9cc", "#ff6384", "#ff9f40"],
+                    },
+                ],
+            };
+            new Chart(ctx, {
+                type: "bar",
+                data,
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                        },
+                    },
+                },
+            });
+        }
+
+        function exportResults(fStat, pValue, ssBetween, ssWithin, msBetween, msWithin, dfBetween, dfWithin, groupMeans) {
+            const csvData = [
+                ["F-statistic", fStat],
+                ["p-Value", pValue],
+                ["SSB", ssBetween],
+                ["SSW", ssWithin],
+                ["MSB", msBetween],
+                ["MSW", msWithin],
+                ["dfBetween", dfBetween],
+                ["dfWithin", dfWithin],
+                ["Group Means", groupMeans.map((m, idx) => `Group ${idx + 1}: ${m}`).join(", ")],
+            ];
+
+            exportToCSV(csvData, "anova_results.csv");
+        }
+    </script>
+</head>
+<body>
+    <h1>EzANOVA</h1>
+    <p>Enter data for each group separated by commas:</p>
+
+    <div id="groups">
+        <div>
+            <input type="text" placeholder="Group 1 data" aria-label="Group 1 data" />
+        </div>
+    </div>
+    <br>
+    <button onclick="addGroup()">Add Group</button>
+    <button onclick="removeGroup()">Remove Group</button>
+    <br><br>
+    <button onclick="calculateAnova()">Calculate ANOVA</button>
+
+    <div id="results"></div>
+    <canvas id="chart"></canvas>
+</body>
+</html>
