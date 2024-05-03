@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EzNormalizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            padding: 20px;
+            max-width: 900px;
+            margin: auto;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .input-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .input-area input {
+            padding: 8px;
+            margin-right: 10px;
+            flex: 1;
+        }
+        .input-area button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .input-area button:hover {
+            background-color: #45a049;
+        }
+        .alert {
+            color: red;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .btn-clear {
+            background-color: #dc3545;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .btn-clear:hover {
+            background-color: #c82333;
+        }
+        .btn-export {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .btn-export:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let data = [];
+
+        function normalizeZScore(data) {
+            const results = data.map(d => parseFloat(d.result));
+            const mean = results.reduce((a, b) => a + b, 0) / results.length;
+            const stdDev = Math.sqrt(
+                results.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / results.length
+            );
+
+            return data.map(d => {
+                const zScore = (parseFloat(d.result) - mean) / stdDev;
+                return { ...d, normalizedResult: zScore.toFixed(2) };
+            });
+        }
+
+        function addData() {
+            const experiment = document.getElementById("experiment").value;
+            const sample = document.getElementById("sample").value;
+            const result = document.getElementById("result").value;
+
+            const alert = document.getElementById("alert");
+
+            if (!experiment || !sample || isNaN(parseFloat(result))) {
+                alert.innerText = "Please enter valid data.";
+                return;
+            }
+
+            alert.innerText = "";
+            
+            data.push({ experiment, sample, result });
+            document.getElementById("experiment").value = '';
+            document.getElementById("sample").value = '';
+            document.getElementById("result").value = '';
+            
+            const normalizedData = normalizeZScore(data);
+            showResults(normalizedData);
+            drawChart(normalizedData);
+        }
+
+        function loadFromCSV(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.trim().split("\n");
+                data = lines.map(line => {
+                    const [experiment, sample, result] = line.split(",");
+                    return { experiment, sample, result };
+                });
+                const normalizedData = normalizeZScore(data);
+                showResults(normalizedData);
+                drawChart(normalizedData);
+            };
+            reader.readAsText(file);
+        }
+
+        function removeData(index) {
+            data.splice(index, 1);
+            const normalizedData = normalizeZScore(data);
+            showResults(normalizedData);
+            drawChart(normalizedData);
+        }
+
+        function clearData() {
+            data = [];
+            showResults([]);
+            clearChart();
+        }
+
+        function showResults(data) {
+            const table = document.getElementById("results");
+            table.innerHTML = "";
+
+            data.forEach((d, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${d.experiment}</td>
+                    <td>${d.sample}</td>
+                    <td>${d.result}</td>
+                    <td>${d.normalizedResult}</td>
+                    <td><button onclick="removeData(${index})"><i class="fa fa-trash"></i> Remove</button></td>
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        let chart;
+
+        function drawChart(data) {
+            const ctx = document.getElementById("chart").getContext("2d");
+            const labels = data.map(d => d.sample);
+            const results = data.map(d => parseFloat(d.result));
+            const normalizedResults = data.map(d => parseFloat(d.normalizedResult));
+
+            if (chart) {
+                chart.destroy(); // Destroy the previous chart before creating a new one
+            }
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Original Results',
+                            data: results,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Normalized Results',
+                            data: normalizedResults,
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                        beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportCSV() {
+            const csvContent = "data:text/csv;charset=utf-8,"
+                + "Experiment,Sample,Result,Normalized Result\n"
+                + data.map(d => `${d.experiment},${d.sample},${d.result},${d.normalizedResult}`).join("\n");
+
+            const link = document.createElement("a");
+            link.href = encodeURI(csvContent);
+            link.download = "normalized_results.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+    </script>
+</head>
+<body>
+    <h1>EzNormalizer</h1>
+    <div id="alert" class="alert"></div>
+    <div class="input-area">
+        <input type="text" id="experiment" placeholder="Experiment" />
+        <input type="text" id="sample" placeholder="Sample" />
+        <input type="number" id="result" placeholder="Result" />
+        <button onclick="addData()"><i class="fa fa-plus"></i> Add</button>
+    </div>
+    <div class="input-area">
+        <input type="file" accept=".csv" onchange="loadFromCSV(event)" />
+        <p>Upload a CSV file with the format: experiment, sample, result</p>
+    </div>
+    <button class="btn-clear" onclick="clearData()"><i class="fa fa-trash"></i> Clear All Data</button>
+    <button class="btn-export" onclick="exportCSV()"><i class="fa fa-file-csv"></i> Export as CSV</button>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Experiment</th>
+                <th>Sample</th>
+                <th>Result</th>
+                <th>Normalized Result</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="results">
+        </tbody>
+    </table>
+    
+    <h2>Results Chart</h2>
+    <canvas id="chart" width="400" height="200"></canvas>
+</body>
+</html>
