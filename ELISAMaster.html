@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ELISA Experiment Planning Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Library for interactive charts -->
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .form-section {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-label {
+            display: block;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        input, button {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .result-section {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            white-space: pre-wrap; /* To maintain line breaks */
+        }
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            margin: 20px 0;
+        }
+        .tooltip {
+            background-color: #333;
+            color: white;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+    <script>
+        // Validate if a value is a positive number
+        function isValidNumber(value) {
+            return !isNaN(value) && value > 0;
+        }
+
+        // Export data as CSV
+        function exportToCSV(data, fileName) {
+            const csv = data.map(row => row.join(",")).join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Calculate dilution and create charts
+        function calculateDilution() {
+            try {
+                const stock = parseFloat(document.getElementById("stock").value);
+                const final = parseFloat(document.getElementById("final").value);
+                const finalVolume = parseFloat(document.getElementById("finalVolume").value);
+                const numSamples = parseInt(document.getElementById("numSamplesDilution").value);
+
+                if (!isValidNumber(stock) || !isValidNumber(final) || !isValidNumber(finalVolume) || !isValidNumber(numSamples)) {
+                    throw new Error("Please enter valid values in all fields.");
+                }
+
+                const stockVolumePerSample = (final / stock) * finalVolume;
+                const diluentVolumePerSample = finalVolume - stockVolumePerSample;
+
+                const totalStockVolume = stockVolumePerSample * numSamples;
+                const totalDiluentVolume = diluentVolumePerSample * numSamples;
+
+                const resultText = 
+                    `Stock volume per sample: ${stockVolumePerSample.toFixed(2)} µL\n` +
+                    `Diluent volume per sample: ${diluentVolumePerSample.toFixed(2)} µL\n` +
+                    `Total stock volume for all samples: ${totalStockVolume.toFixed(2)} µL\n` +
+                    `Total diluent volume for all samples: ${totalDiluentVolume.toFixed(2)} µL`;
+
+                document.getElementById("dilutionResult").innerText = resultText;
+
+                const chartData = {
+                    labels: ["Stock", "Diluent"],
+                    datasets: [
+                        {
+                            label: "Total volume (µL)",
+                            data: [totalStockVolume, totalDiluentVolume],
+                            backgroundColor: ["#36a2eb", "#ff6384"],
+                        },
+                    ],
+                };
+
+                const ctx = document.getElementById("dilutionChart").getContext("2d");
+                new Chart(ctx, {
+                    type: "bar",
+                    data: chartData,
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                            },
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: (tooltipItem) => `Volume: ${tooltipItem.raw.toFixed(2)} µL`,
+                                },
+                            },
+                        },
+                    },
+                });
+
+                return [
+                    ["Type", "Volume (µL)"],
+                    ["Stock", totalStockVolume.toFixed(2)],
+                    ["Diluent", totalDiluentVolume.toFixed(2)],
+                ];
+            } catch (error) {
+                document.getElementById("dilutionResult").innerText = `Error: ${error.message}`;
+                return [];
+            }
+        }
+
+        // Calculate reagents for ELISA plates with interactive charts
+        function calculateReagents() {
+            try {
+                const reagentPerWell = parseFloat(document.getElementById("reagentPerWell").value);
+                const numPlates = parseInt(document.getElementById("numPlates").value);
+                const numWellsPerPlate = parseInt(document.getElementById("numWellsPerPlate").value);
+
+                if (!isValidNumber(reagentPerWell) || !isValidNumber(numPlates) || !isValidNumber(numWellsPerPlate)) {
+                    throw new Error("Please enter valid values in all fields.");
+                }
+
+                const reagentPerPlate = reagentPerWell * numWellsPerPlate;
+                const totalReagent = reagentPerPlate * numPlates;
+
+                const resultText = 
+                    `Reagent per plate: ${reagentPerPlate.toFixed(2)} µL\n` +
+                    `Total reagent for all plates: ${totalReagent.toFixed(2)} µL`;
+
+                document.getElementById("reagentResult").innerText = resultText;
+
+                const chartData = {
+                    labels: ["Reagent per plate", "Total reagent"],
+                    datasets: [
+                        {
+                            label: "Volume (µL)",
+                            data: [reagentPerPlate, totalReagent],
+                            backgroundColor: ["#36a2eb", "#ffce56"],
+                        },
+                    ],
+                };
+
+                const ctx = document.getElementById("reagentChart").getContext("2d");
+                new Chart(ctx, {
+                    type: "bar",
+                    data: chartData,
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                            },
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: (tooltipItem) => `Volume: ${tooltipItem.raw.toFixed(2)} µL`,
+                                },
+                            },
+                        },
+                    },
+                });
+
+                return [
+                    ["Description", "Volume (µL)"],
+                    ["Reagent per plate", reagentPerPlate.toFixed(2)],
+                    ["Total reagent", totalReagent.toFixed(2)],
+                ];
+            } catch (error) {
+                document.getElementById("reagentResult").innerText = `Error: ${error.message}`;
+                return [];
+            }
+        }
+
+        // Plan the experiment with the option to export
+        function planExperiment() {
+            try {
+                const name = document.getElementById("experimentName").value;
+                const date = document.getElementById("experimentDate").value;
+                const numSamples = parseInt(document.getElementById("numSamples").value);
+                const sampleType = document.getElementById("sampleType").value;
+                const notes = document.getElementById("notes").value;
+
+                if (!name || !isValidNumber(numSamples)) {
+                    throw new Error("Please complete all mandatory fields with valid values.");
+                }
+
+                const resultText = 
+                    `Experiment Name: ${name}\n` +
+                    `Experiment Date: ${date}\n` +
+                    `Sample Type: ${sampleType}\n` +
+                    `Total Number of Samples: ${numSamples}\n` +
+                    `Notes: ${notes || "N/A"}`;
+
+                document.getElementById("experimentResult").innerText = resultText;
+
+                return [
+                    ["Field", "Value"],
+                    ["Experiment Name", name],
+                    ["Experiment Date", date],
+                    ["Sample Type", sampleType],
+                    ["Total Number of Samples", numSamples],
+                    ["Notes", notes || "N/A"],
+                ];
+            } catch (error) {
+                document.getElementById("experimentResult").innerText = `Error: ${error.message}`;
+                return [];
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>ELISA Experiment Planning Tool</h1>
+
+    <div class="form-section">
+        <h2>Experiment Information</h2>
+        <form onsubmit="const data = planExperiment(); exportToCSV(data, 'experiment.csv'); return false;">
+            <label class="form-label" for="experimentName">Experiment Name:</label>
+            <input type="text" id="experimentName" placeholder="Enter the experiment name" required>
+
+            <label class="form-label" for="experimentDate">Experiment Date:</label>
+            <input type="date" id="experimentDate" required>
+
+            <label class="form-label" for="numSamples">Number of Samples:</label>
+            <input type="number" id="numSamples" min="1" required>
+
+            <label class="form-label" for="sampleType">Sample Type:</label>
+            <input type="text" id="sampleType" required>
+
+            <label class="form-label" for="notes">Notes:</label>
+            <input type="text" id="notes">
+
+            <button type="submit">Plan Experiment</button>
+        </form>
+
+        <div class="result-section" id="experimentResult"></div>
+    </div>
+
+    <div class="form-section">
+        <h2>Dilution Calculation</h2>
+        <form onsubmit="const data = calculateDilution(); exportToCSV(data, 'dilutions.csv'); return false;">
+            <label class="form-label" for="stock">Stock Concentration (µg/mL):</label>
+            <input type="number" step="0.01" id="stock" required>
+
+            <label la form-label for="final">Desired Final Concentration (µg/mL):</label>
+            <input type="number" step="0.01" id="final" required>
+
+            <label la form-label for="finalVolume">Final Volume per Sample (µL):</label>
+            <input tipo="number" step="0.01" id="finalVolume" required>
+
+            <label la form-label for="numSamplesDilution">Number of Samples:</label>
+            <input tipo="number" id="numSamplesDilution" min="1" required>
+
+            <button type="submit">Calculate Dilution</button>
+        </form>
+
+        <div class="result-section" id="dilutionResult"></div>
+        <div class="chart-container">
+            <canvas id="dilutionChart"></canvas>
+        </div>
+    </div>
+
+    <div la form-section>
+        <h2>Reagent Calculation for ELISA Plates</h2>
+        <form onsubmit="const data = calculateReagents(); exportToCSV(data, 'reagents.csv'); return false;">
+            <label la form-label para="reagentPerWell">Reagent Volume per Well (µL):</label>
+            <input tipo="number" step="0.01" id="reagentPerWell" required>
+
+            <label la form-label para="numWellsPerPlate">Number of Wells per Plate:</label>
+            <input tipo="number" id="numWellsPerPlate" min="1" required>
+
+            <label la form-label para="numPlates">Number of Plates:</label>
+            <input tipo="number" id="numPlates" min="1" required>
+
+            <button type="submit">Calculate Reagents</button>
+        </form>
+
+        <div la result-section id="reagentResult"></div>
+        <div la chart-container>
+            <canvas id="reagentChart"></canvas>
+        </div>
+    </div>
+</body>
+</html>
