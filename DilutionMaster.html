@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Laboratory Dilution Calculator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f2f2f2;
+            padding: 30px;
+            text-align: center;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #555;
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            text-align: left;
+            color: #444;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .result {
+            font-size: 18px;
+            color: #333;
+            text-align: left;
+        }
+        .error {
+            font-size: 18px;
+            color: #e74c3c;
+            text-align: left;
+        }
+        canvas {
+            display: block;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Laboratory Dilution Calculator</h1>
+        <p>Calculate serial dilutions with support for multiple concentration and volume units.</p>
+
+        <h2>Input Data</h2>
+        <div>
+            <label for="initial_concentration">Initial Concentration:</label>
+            <input type="number" step="0.01" id="initial_concentration" placeholder="Example: 100">
+            <select id="unit_initial_concentration">
+                <option value="M">Molar (M)</option>
+                <option value="mM">Millimolar (mM)</option>
+                <option value="µM">Micromolar (µM)</option>
+                <option value="nM">Nanomolar (nM)</option>
+                <option value="g/L">Grams per liter (g/L)</option>
+                <option value="ppm">Parts per million (ppm)</option>
+                <option value="ppb">Parts per billion (ppb)</option>
+                <option value="mg/L">Milligrams per liter (mg/L)</option>
+                <option value="N">Normality (N)</option>
+                <option value="mole_fraction">Mole Fraction</option>
+            </select>
+        </div>
+        <div>
+            <label for="initial_volume">Initial Volume:</label>
+            <input type="number" step="0.01" id="initial_volume" placeholder="Example: 50">
+            <select id="unit_initial_volume">
+                <option value="µL">Microliters (µL)</option>
+                <option value="mL">Milliliters (mL)</option>
+                <option value="L">Liters (L)</option>
+            </select>
+        </div>
+        <div>
+            <label for="final_volume">Final Volume:</label>
+            <input type="number" step="0.01" id="final_volume" placeholder="Example: 100">
+            <select id="unit_final_volume">
+                <option value="µL">Microliters (µL)</option>
+                <option value="mL">Milliliters (mL)</option>
+                <option value="L">Liters (L)</option>
+            </select>
+        </div>
+        
+        <h2>Final Concentration Unit</h2>
+        <div>
+            <select id="unit_final_concentration">
+                <option value="M">Molar (M)</option>
+                <option value="mM">Millimolar (mM)</option>
+                <option value="µM">Micromolar (µM)</option>
+                <option value="nM">Nanomolar (nM)</option>
+                <option value="g/L">Grams per liter (g/L)</option>
+                <option value="ppm">Parts per million (ppm)</option>
+                <option value="ppb">Parts per billion (ppb)</option>
+                <option value="mg/L">Milligrams per liter (mg/L)</option>
+                <option value="N">Normality (N)</option>
+                <option value="mole_fraction">Mole Fraction</option>
+            </select>
+        </div>
+
+        <h2>Number of Serial Dilutions</h2>
+        <div>
+            <input type="number" id="number_of_dilutions" placeholder="Enter number of dilutions">
+        </div>
+
+        <button class="btn" onclick="calculateSerialDilutions()">Calculate Serial Dilutions</button>
+        <button class="btn" onclick="exportResultsAsCSV()">Export Results as CSV</button>
+
+        <div id="error" class="error"></div>
+
+        <canvas id="dilutionChart" width="400" height="200"></canvas>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        function convertToMolar(concentration, unit) {
+            const conversionFactors = {
+                'M': 1,
+                'mM': 1e-3,
+                'µM': 1e-6,
+                'nM': 1e-9,
+                'g/L': 1 / 18.01528,
+                'ppm': 1e-6,
+                'ppb': 1e-9,
+                'mg/L': 1 / 1000,
+                'N': 1,
+                'mole_fraction': 1
+            };
+            return concentration * conversionFactors[unit];
+        }
+
+        function convertToMilliliters(volume, unit) {
+            const conversionFactors = {
+                'µL': 0.001,
+                'mL': 1,
+                'L': 1000
+            };
+            return volume * conversionFactors[unit];
+        }
+
+        function convertFromMolar(molarity, finalUnit) {
+            const conversionFactors = {
+                'M': 1,
+                'mM': 1e3,
+                'µM': 1e6,
+                'nM': 1e9,
+                'g/L': 18.01528,
+                'ppm': 1e6,
+                'ppb': 1e9,
+                'mg/L': 1000,
+                'N': 1,
+                'mole_fraction': 1
+            };
+            return molarity * conversionFactors[finalUnit];
+        }
+
+        function calculateSerialDilutions() {
+            document.getElementById("error").innerText = "";
+            document.getElementById("result").innerText = "";
+
+            const numberOfDilutions = parseFloat(document.getElementById("number_of_dilutions").value);
+            if (isNaN(numberOfDilutions) || numberOfDilutions < 1) {
+                document.getElementById("error").innerText = "Please enter a valid number of dilutions.";
+                return;
+            }
+
+            const initialConcentration = parseFloat(document.getElementById("initial_concentration").value);
+            const initialConcentrationUnit = document.getElementById("unit_initial_concentration").value;
+            const initialVolume = parseFloat(document.getElementById("initial_volume").value);
+            const initialVolumeUnit = document.getElementById("unit_initial_volume").value;
+            const finalVolume = parseFloat(document.getElementById("final_volume").value);
+            const finalVolumeUnit = document.getElementById("unit_final_volume").value;
+
+            if (isNaN(initialConcentration) || isNaN(initialVolume) || isNaN(finalVolume) || initialConcentration <= 0 || initialVolume <= 0 || finalVolume <= 0) {
+                document.getElementById("error").innerText = "Please enter valid and positive values.";
+                return;
+            }
+
+            const initialMolarity = convertToMolar(initialConcentration, initialConcentrationUnit);
+            const initialVolume_mL = convertToMilliliters(initialVolume, initialVolumeUnit);
+            const finalVolume_mL = convertToMilliliters(finalVolume, finalVolumeUnit);
+
+            const results = [];
+            let currentMolarity = initialMolarity;
+
+            for (let i = 1; i <= numberOfDilutions; i++) {
+                currentMolarity = (currentMolarity * initialVolume_mL) / finalVolume_mL;
+                results.push({
+                    dilution: i,
+                    concentration: currentMolarity.toFixed(6),
+                    unit: "M"
+                });
+            }
+
+            // Update chart
+            const ctx = document.getElementById("dilutionChart").getContext("2d");
+            new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: results.map((res) => "Dilution " + res.dilution),
+                    datasets: [{
+                        label: "Molarity (M)",
+                        data: results.map((res) => parseFloat(res.concentration)),
+                        borderColor: "#4CAF50",
+                        borderWidth: 2,
+                        fill: false,
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: "Number of Dilutions",
+                                color: "#333",
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: "Molarity (M)",
+                                color: "#333",
+                                font: {
+                                    size: 14
+                                }
+                            },
+                            type: "logarithmic",  // For serial dilutions
+                        }
+                    }
+                }
+            });
+
+            document.getElementById("result").innerText = results.map((res) => `Dilution ${res.dilution}: ${res.concentration} M`).join("\n");
+        }
+
+        function exportResultsAsCSV() {
+            const resultsText = document.getElementById("result").innerText;
+            const lines = resultsText.split("\n");
+            const csvContent = "data:text/csv;charset=utf-8," + lines.join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "dilution_results.csv");
+            document.body.appendChild(link);
+
+            link.click();
+        }
+    </script>
+</body>
+</html>
