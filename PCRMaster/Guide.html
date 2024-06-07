@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCR Master User Guide</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #1E90FF; /* DodgerBlue color for titles and headings */
+        }
+        h1 {
+            font-size: 2em;
+        }
+        h2 {
+            font-size: 1.5em;
+        }
+        h3, h4 {
+            font-size: 1.2em;
+        }
+        p, ul {
+            margin: 0 0 20px 0;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PCR Master User Guide</h1>
+        <p>PCR Master is a comprehensive tool for sequence analysis, PCR volume calculation, and additional PCR utilities. This guide details how to use each feature available in the application.</p>
+
+        <h2>Features</h2>
+
+        <h3>1. Sequence Analysis</h3>
+        <p><strong>Description</strong>: Analyzes DNA, RNA, and protein sequences to obtain molecular mass, GC content, melting temperature, complementary sequence, and dimer count.</p>
+        <p><strong>Steps</strong>:</p>
+        <ul>
+            <li>Select the sequence type (DNA, RNA, Protein) from the dropdown menu.</li>
+            <li>Enter the sequence in the text area.</li>
+            <li>Click "Analyze" to view the results.</li>
+            <li>Optionally, you can export the results to CSV or generate a PDF.</li>
+        </ul>
+        <p><strong>Results Included</strong>:</p>
+        <ul>
+            <li>Molecular Mass</li>
+            <li>GC Content (%)</li>
+            <li>Melting Temperature (Tm)</li>
+            <li>Complementary Sequence</li>
+            <li>Dimer Count</li>
+        </ul>
+
+        <h3>2. Base Composition Chart</h3>
+        <p><strong>Description</strong>: Generates a chart showing the base composition of a sequence.</p>
+        <p><strong>Steps</strong>:</p>
+        <ul>
+            <li>Enter the sequence in the appropriate field.</li>
+            <li>The chart will be generated automatically.</li>
+        </ul>
+
+        <h3>3. PCR Calculator</h3>
+        <p><strong>Description</strong>: Calculates the total volume needed for a PCR reaction.</p>
+        <p><strong>Steps</strong>:</p>
+        <ul>
+            <li>Enter the number of samples.</li>
+            <li>Enter the volume of each component (Mastermix, dNTP, Primers, Template DNA, Water).</li>
+            <li>Click "Calculate" to get the total volume.</li>
+        </ul>
+
+        <h3>4. History</h3>
+        <p><strong>Description</strong>: Saves and displays a history of performed analyses and calculations.</p>
+        <p><strong>Steps</strong>:</p>
+        <ul>
+            <li>Perform any analysis or calculation.</li>
+            <li>The results will be automatically saved in the history.</li>
+            <li>To view the history, go to the "History" tab.</li>
+            <li>You can delete items from the history by clicking the corresponding "Delete" button.</li>
+        </ul>
+
+        <h3>5. Extra PCR Tools</h3>
+        <p><strong>Description</strong>: Additional tools for various PCR-related calculations.</p>
+
+        <h4>a. Calculate PCR Efficiency</h4>
+        <p><strong>Steps</strong>:</p>
+        <ul>
+            <li>Click "Calculate PCR Efficiency".</li>
+            <li>Enter the initial and final quantity of PCR product, and the number of cycles.</li>
+            <li>The efficiency will be calculated and displayed automatically.</li>
+        </ul>
+
+        <h4>b. Calculate DNA Concentration</h4>
+        <p><strong>Steps</strong>:</p>
+        <ul>
+            <li>Click "Calculate DNA Concentration".</li>
+            <li>Enter the absorbance at 260 nm and the dilution factor.</li>
+            <li>The concentration will be calculated and displayed automatically.</li>
+        </ul>
+
+        <h4>c. Calculate Primer Tm</h4>
+        <p><strong>Steps</strong>:</p>
+        <ul>
+            <li>Click "Calculate Primer Tm".</li>
+            <li>Enter the primer sequence.</li>
+            <li>The melting temperature will be calculated and displayed automatically.</li>
+        </ul>
+
+        <h4>d. Detect Restriction Sites</h4>
+        <p><strong>Steps</strong>:</p>
+        <ul>
+            <li>Click "Detect Restriction Sites".</li>
+            <li>Enter the DNA sequence and the restriction sites (comma separated).</li>
+            <li>The detected sites will be displayed automatically.</li>
+        </ul>
+
+    </div>
+</body>
+</html>
