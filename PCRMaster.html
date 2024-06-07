@@ -2,359 +2,406 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PCR Master - BurlaSoft</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCR Master</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.css" />
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
             padding: 20px;
-            max-width: 900px;
-            margin: auto;
-            background-color: #f9f9f9;
-            border: 1px sólido #ddd;
-            borde-radio: 10px;
-            caja-sombra: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            texto-centro: centro.
         }
-        h1 {
-            color: #333.
-            margen-inferior: 20px.
+        .tab {
+            cursor: pointer;
+            padding: 10px 20px;
+            background-color: #333333;
+            display: inline-block;
+            margin: 0 5px;
+            border-radius: 5px;
         }
-        p {
-            color: #666.
-            margen-inferior: 20px.
+        .tab-active {
+            background-color: #555555;
         }
-        .input-group {
-            display: flex.
-            flex-direction: columna.
-            align-items: centro.
-            justificar-contenido: centro.
-            margen-inferior: 20px.
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background-color: #222222;
+            border-radius: 5px;
+            margin-top: 20px;
         }
-        select, input {
-            padding: 10px.
-            fuente-tamaño: 16px.
-            borde: 1px sólido #ccc.
-            borde-radio: 5px.
-            ancho: 80%.
-            margen-inferior: 10px.
+        .tab-content-active {
+            display: block;
+        }
+        input, select, button, textarea {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #333333;
+            background-color: #333333;
+            color: #ffffff;
+            width: 100%;
+            box-sizing: border-box;
         }
         button {
-            padding: 10px.
-            fuente-tamaño: 16px.
-            borde: ninguno.
-            borde-radio: 5px.
-            fondo-color: #4CAF50.
-            color: blanco.
-            cursor: pointer.
-            transición: fondo-color 0.3s.
-            ancho: 80%.
+            cursor: pointer;
+            background-color: #444444;
         }
         button:hover {
-            fondo-color: #45a049.
-        }
-        .result, .error {
-            fuente-tamaño: 18px.
-            borde: 1px sólido #ddd.
-            borde-radio: 5px.
-            margen-inferior: 20px.
-            padding: 10px.
-        }
-        .result {
-            fondo-color: #e9ffe9.
-            color: #333.
+            background-color: #555555;
         }
         .error {
-            color: rojo.
-            texto-alineación: centro.
-            fondo-color: #ffe9e9.
+            color: #ff4444;
         }
-        .chart-container {
-            ancho: 100%.
-            máximo-ancho: 500px.
-            margen: automático.
-            padding: 20px.
+        .history-item {
+            border-bottom: 1px solid #444444;
+            padding: 10px 0;
         }
-        canvas {
-            máximo-ancho: 100%.
+        .delete-button {
+            background-color: #ff4444;
+            border: none;
+        }
+        .delete-button:hover {
+            background-color: #ff5555;
         }
     </style>
 </head>
 <body>
-    <h1>PCR Master</h1>
-    <p>Analyze DNA, RNA, and protein sequences. Calculate molecular mass, GC content, melting temperature, and more. Generate a pie chart to visualize base composition.</p>
-    <div class="input-group">
-        <select id="sequence-type">
-            <option value="dna">DNA</option>
-            <option value="rna">RNA</option>
-            <option value="protein">Protein</option>
-        </select>
-        <input type="file" id="file-input" accept=".txt,.fasta,.csv">
-        <input type="text" id="sequence-input" placeholder="Enter sequence" maxlength="200">
-        <button id="analyze-button">Analyze</button>
+    <div class="container">
+        <div class="tabs">
+            <div id="tab-results" class="tab tab-active" onclick="showTab('results')">Results</div>
+            <div id="tab-chart" class="tab" onclick="showTab('chart')">Chart</div>
+            <div id="tab-pcr-calculator" class="tab" onclick="showTab('pcr-calculator')">PCR Calculator</div>
+            <div id="tab-history" class="tab" onclick="showTab('history')">History</div>
+            <div id="tab-extra-tools" class="tab" onclick="showTab('extra-tools')">Extra Tools</div>
+        </div>
+        <div id="tab-content-results" class="tab-content tab-content-active">
+            <h2>Sequence Analysis</h2>
+            <label for="sequence-type">Sequence Type:</label>
+            <select id="sequence-type">
+                <option value="dna">DNA</option>
+                <option value="rna">RNA</option>
+                <option value="protein">Protein</option>
+            </select>
+            <label for="sequence-input">Sequence:</label>
+            <textarea id="sequence-input" rows="5"></textarea>
+            <button id="analyze-button">Analyze</button>
+            <div id="error" class="error"></div>
+            <div id="result"></div>
+            <button id="csv-button" style="display:none;" onclick="exportResultsToCSV()">Export to CSV</button>
+            <button id="pdf-button" style="display:none;" onclick="generatePDF()">Generate PDF</button>
+        </div>
+        <div id="tab-content-chart" class="tab-content">
+            <h2>Base Composition Chart</h2>
+            <canvas id="base-chart"></canvas>
+        </div>
+        <div id="tab-content-pcr-calculator" class="tab-content">
+            <h2>PCR Calculator</h2>
+            <label for="sample-count">Number of Samples:</label>
+            <input type="number" id="sample-count" />
+            <label for="mastermix-volume">Mastermix Volume (µL):</label>
+            <input type="number" id="mastermix-volume" />
+            <label for="dntp-volume">dNTP Volume (µL):</label>
+            <input type="number" id="dntp-volume" />
+            <label for="primer-volume">Primer Volume (µL):</label>
+            <input type="number" id="primer-volume" />
+            <label for="template-volume">Template DNA Volume (µL):</label>
+            <input type="number" id="template-volume" />
+            <label for="water-volume">Water Volume (µL):</label>
+            <input type="number" id="water-volume" />
+            <button id="calculate-pcr-button">Calculate</button>
+            <div id="pcr-result"></div>
+        </div>
+        <div id="tab-content-history" class="tab-content">
+            <h2>History</h2>
+            <ul id="history-list"></ul>
+        </div>
+        <div id="tab-content-extra-tools" class="tab-content">
+            <h2>Extra PCR Tools</h2>
+            <button id="calculate-efficiency-button">Calculate PCR Efficiency</button>
+            <button id="calculate-concentration-button">Calculate DNA Concentration</button>
+            <button id="calculate-tm-button">Calculate Primer Tm</button>
+            <button id="detect-restriction-sites-button">Detect Restriction Sites</button>
+            <div id="extra-tools-result"></div>
+        </div>
     </div>
-    <div class="error" id="error"></div>
-    <div class="result" id="result"></div>
-    <button onclick="exportResultsToCSV()" style="display: none;" id="csv-button">Export to CSV</button>
-    <button onclick="generatePDF()" style="display: none;" id="pdf-button">Generate PDF</button>
 
-    <div class="chart-container">
-        <canvas id="base-chart"></canvas>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
     <script>
-        const nucleotideMasses = {
-            'A': 313.2,
-            'T': 304.2,
-            'U': 306.2,
-            'G': 329.2,
-            'C': 289.2
-        };
-
-        const aminoAcidMasses = {
-            'A': 89.1,
-            'R': 174.2,
-            'N': 132.1,
-            'D': 133.1,
-            'C': 121.2,
-            'E': 147.1,
-            'Q': 146.1,
-            'G': 75.1,
-            'H': 155.2,
-            'I': 131.2,
-            'L': 131.2,
-            'K': 146.2,
-            'M': 149.2,
-            'F': 165.2,
-            'P': 115.1,
-            'S': 105.1,
-            'T': 119.1,
-            'W': 204.2,
-            'Y': 181.2,
-            'V': 117.1
-        };
-
-        function readFile(callback) {
-            const fileInput = document.getElementById("file-input");
-            if (fileInput.files.length === 0) {
-                callback(null);
-            } else {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const content = e.target.result.trim().toUpperCase();
-                    callback(content);
-                };
-                reader.readAsText(fileInput.files[0]);
-            }
-        }
+        const history = [];
+        const aminoAcidMasses = { 'A': 89.1, 'R': 174.2, 'N': 132.1, 'D': 133.1, 'C': 121.2, 'E': 147.1, 'Q': 146.1, 'G': 75.1, 'H': 155.2, 'I': 131.2, 'L': 131.2, 'K': 146.2, 'M': 149.2, 'F': 165.2, 'P': 115.1, 'S': 105.1, 'T': 119.1, 'W': 204.2, 'Y': 181.2, 'V': 117.1 };
+        const nucleotideMasses = { 'A': 331, 'T': 322, 'C': 307, 'G': 347, 'U': 306 };
 
         function isValidSequence(sequence, acidType) {
-            const validBases = acidType === 'dna' ? /^[ATGC]+$/ : /^[AUGC]+$/;
-            const validProteins = /^[ARNDCQEGHILKMFPSTWYV]+$/;
-
-            return acidType === 'protein' ? validProteins.test(sequence) : validBases.test(sequence);
+            const validBases = acidType === 'protein' ? /^[ACDEFGHIKLMNPQRSTVWY]+$/ : 
+                              acidType === 'rna' ? /^[AUCG]+$/ : /^[ATCG]+$/;
+            return validBases.test(sequence);
         }
 
         function calculateMolecularMass(sequence, acidType) {
-            let totalMass = 0;
-            if (acidType === 'protein') {
-                for (let i = 0; i < sequence.length; i++) {
-                    const aminoAcid = sequence[i];
-                    totalMass += aminoAcidMasses[aminoAcid];
-                }
-            } else {
-                for (let i = 0; i < sequence.length; i++) {
-                    const nucleotide = sequence[i];
-                    totalMass += nucleotideMasses[nucleotide];
-                }
-            }
-            return totalMass.toFixed(2);
+            const masses = acidType === 'protein' ? aminoAcidMasses : nucleotideMasses;
+            return sequence.split('').reduce((acc, base) => acc + (masses[base] || 0), 0).toFixed(2);
         }
 
         function calculateGCContent(sequence) {
             const gCount = sequence.split('G').length - 1;
             const cCount = sequence.split('C').length - 1;
-            const gcContent = ((gCount + cCount) / sequence.length) * 100;
-            return gcContent.toFixed(2);
+            return ((gCount + cCount) / sequence.length * 100).toFixed(2);
         }
 
         function calculateMeltingTemperature(sequence) {
-            const aCount = sequence.split('A').length - 1;
-            const tCount = sequence.split('T').length - 1;
             const gCount = sequence.split('G').length - 1;
             const cCount = sequence.split('C').length - 1;
+            const aCount = sequence.split('A').length - 1;
+            const tCount = sequence.split('T').length - 1;
 
-            const tm = (2 * (aCount + tCount)) + (4 * (gCount + cCount));
-            
-            return tm.toFixed(1);
+            return (64.9 + 41 * (gCount + cCount - 16.4) / (aCount + tCount + gCount + cCount)).toFixed(2);
         }
 
         function getComplementarySequence(sequence, acidType) {
-            const complements = acidType === 'dna'
-                ? { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G' }
-                : { 'A': 'U', 'U': 'A', 'G': 'C', 'C': 'G' };
-
-            let complementarySequence = "";
-            for (let i = 0; i < sequence.length; i++) {
-                const nucleotide = sequence[i];
-                complementarySequence += complements[nucleotide];
-            }
-
-            return complementarySequence;
+            const complements = acidType === 'rna' ? { 'A': 'U', 'U': 'A', 'G': 'C', 'C': 'G' } :
+                               { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G' };
+            return sequence.split('').map(base => complements[base]).join('');
         }
 
         function countDimers(sequence) {
-            let dimers = 0;
+            const dimers = {};
             for (let i = 0; i < sequence.length - 1; i++) {
-                if (sequence[i] === sequence[i + 1]) {
-                    dimers++;
-                }
+                const dimer = sequence.slice(i, i + 2);
+                if (!dimers[dimer]) dimers[dimer] = 0;
+                dimers[dimer]++;
             }
             return dimers;
         }
 
-        function countCodons(sequence) {
-            const codonCounts = {};
-            for (let i = 0; i <= sequence.length - 3; i += 3) {
-                const codon = sequence.slice(i, i + 3);
-                if (!codonCounts[codon]) {
-                    codonCounts[codon] = 1;
-                } else {
-                    codonCounts[codon]++;
-                }
-            }
-            return codonCounts;
+        function calculatePCRVolume(samples, mastermix, dntp, primer, template, water) {
+            const totalVolumePerSample = mastermix + dntp + primer + template + water;
+            const totalVolume = totalVolumePerSample * samples;
+            return totalVolume.toFixed(2);
         }
 
         function analyzeSequence() {
-            const acidType = document.getElementById("sequence-type").value;
-            const errorDiv = document.getElementById("error");
-            const resultDiv = document.getElementById("result");
+            const sequenceType = document.getElementById('sequence-type').value;
+            const sequence = document.getElementById('sequence-input').value.trim().toUpperCase();
+            const errorDiv = document.getElementById('error');
+            const resultDiv = document.getElementById('result');
 
-            readFile(function(fileContent) {
-                const sequenceInput = document.getElementById("sequence-input").value.toUpperCase();
-                const sequence = fileContent || sequenceInput;
+            if (!isValidSequence(sequence, sequenceType)) {
+                errorDiv.textContent = 'Invalid sequence!';
+                return;
+            }
 
-                errorDiv.innerText = ""; // Clear previous errors
-                resultDiv.innerText = ""; // Clear previous results
+            errorDiv.textContent = '';
+            const mass = calculateMolecularMass(sequence, sequenceType);
+            const gcContent = calculateGCContent(sequence);
+            const tm = calculateMeltingTemperature(sequence);
+            const complementarySequence = getComplementarySequence(sequence, sequenceType);
+            const dimers = countDimers(sequence);
 
-                if (sequence.length === 0) {
-                    errorDiv.innerText = "Error: The sequence cannot be empty.";
-                    return;
-                }
+            const resultHtml = `
+                <p><strong>Sequence:</strong> ${sequence}</p>
+                <p><strong>Molecular Mass:</strong> ${mass} Da</p>
+                <p><strong>GC Content:</strong> ${gcContent}%</p>
+                <p><strong>Melting Temperature:</strong> ${tm} °C</p>
+                <p><strong>Complementary Sequence:</strong> ${complementarySequence}</p>
+                <p><strong>Dimers Count:</strong> ${JSON.stringify(dimers)}</p>
+            `;
+            resultDiv.innerHTML = resultHtml;
+            document.getElementById('csv-button').style.display = 'block';
+            document.getElementById('pdf-button').style.display = 'block';
 
-                if (!isValidSequence(sequence, acidType)) {
-                    errorDiv.innerText = acidType === 'dna'
-                        ? "Error: The sequence contains invalid characters. Use A, T, G, C for DNA."
-                        : acidType === 'rna'
-                            ? "Error: Use A, U, G, C for RNA."
-                            : "Error: Protein sequences must contain valid amino acids.";
-                    return;
-                }
+            history.push({
+                type: 'sequence-analysis',
+                sequenceType,
+                sequence,
+                mass,
+                gcContent,
+                tm,
+                complementarySequence,
+                dimers,
+                timestamp: new Date().toLocaleString()
+            });
+            updateHistoryList();
+        }
 
-                try {
-                    const totalMass = calculateMolecularMass(sequence, acidType);
-                    const gcContent = calculateGCContent(sequence);
-                    const complementarySequence = getComplementarySequence(sequence, acidType);
-                    const tm = calculateMeltingTemperature(complementarySequence);
+        function calculatePCR() {
+            const sampleCount = parseFloat(document.getElementById('sample-count').value);
+            const mastermixVolume = parseFloat(document.getElementById('mastermix-volume').value);
+            const dntpVolume = parseFloat(document.getElementById('dntp-volume').value);
+            const primerVolume = parseFloat(document.getElementById('primer-volume').value);
+            const templateVolume = parseFloat(document.getElementById('template-volume').value);
+            const waterVolume = parseFloat(document.getElementById('water-volume').value);
 
-                    const dimers = countDimers(sequence);
-                    const codonCounts = countCodons(sequence);
+            if (isNaN(sampleCount) || isNaN(mastermixVolume) || isNaN(dntpVolume) || isNaN(primerVolume) || isNaN(templateVolume) || isNaN(waterVolume)) {
+                document.getElementById('pcr-result').textContent = 'Please enter valid numbers for all fields.';
+                return;
+            }
 
-                    let codonInfo = "<strong>Codons Found:</strong><br>";
-                    for (const codon in codonCounts) {
-                        codonInfo += `${codon}: ${codonCounts[codon]} times<br>`;
-                    }
+            const totalVolume = calculatePCRVolume(sampleCount, mastermixVolume, dntpVolume, primerVolume, templateVolume, waterVolume);
+            document.getElementById('pcr-result').innerHTML = `<strong>Total Volume for ${sampleCount} samples:</strong> ${totalVolume} µL`;
 
-                    const baseCounts = {
-                        'A': (sequence.match(/A/g) || []).length,
-                        'T': (sequence.match(/T/g) || []).length,
-                        'G': (sequence.match(/G/g) || []).length,
-                        'C': (sequence.match(/C/g) || []).length
-                    };
+            history.push({
+                type: 'pcr-calculation',
+                sampleCount,
+                mastermixVolume,
+                dntpVolume,
+                primerVolume,
+                templateVolume,
+                waterVolume,
+                totalVolume,
+                timestamp: new Date().toLocaleString()
+            });
+            updateHistoryList();
+        }
 
-                    resultDiv.innerHTML = `
-                        <strong>Molecular Mass:</strong> ${totalMass} Da<br>
-                        <strong>GC Content:</strong> ${gcContent}%<br>
-                        <strong>Primer Melting Temperature (Tm):</strong> ${tm} °C<br>
-                        <strong>Recommended PCR Program:</strong><br>
-                        - Denaturation: 95°C for 30 seconds<br>
-                        - Annealing: ${tm - 5} to ${tm - 10} °C for 30 seconds<br>
-                        - Extension: 72°C for 30 seconds<br>
-                        - Number of cycles: 25-35<br>
-                        - Final extension: 72°C for 5-10 minutes<br>
-                        <strong>Complementary Sequence:</strong> ${complementarySequence}<br>
-                        <strong>Total Bases in Original Sequence:</strong> ${baseCounts['A'] + baseCounts['T'] + baseCounts['G'] + baseCounts['C']}<br>
-                        <strong>Total Dimers:</strong> ${dimers}<br>
-                        ${codonInfo}`;
+        function calculateEfficiency() {
+            const pcrProductInitial = parseFloat(prompt('Enter initial quantity of PCR product:'));
+            const pcrProductFinal = parseFloat(prompt('Enter final quantity of PCR product after n cycles:'));
+            const cycles = parseInt(prompt('Enter the number of PCR cycles performed:'));
 
-                    const chartData = {
-                        labels: ['A', 'T', 'G', 'C'],
-                        datasets: [{
-                            data: [
-                                ((baseCounts['A'] / (baseCounts['A'] + baseCounts['T'] + baseCounts['G'] + baseCounts['C'])) * 100).toFixed(2),
-                                ((baseCounts['T'] / (baseCounts['A'] + baseCounts['T'] + baseCounts['G'] + baseCounts['C'])) * 100).toFixed(2),
-                                ((baseCounts['G'] / (baseCounts['A'] + baseCounts['T'] + baseCounts['G'] + baseCounts['C'])) * 100).toFixed(2),
-                                ((baseCounts['C'] / (baseCounts['A'] + baseCounts['T'] + baseCounts['G'] + baseCounts['C'])) * 100).toFixed(2)
-                            ],
-                            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
-                        }]
-                    };
+            if (isNaN(pcrProductInitial) || isNaN(pcrProductFinal) || isNaN(cycles) || cycles <= 0) {
+                document.getElementById('extra-tools-result').textContent = 'Please enter valid values.';
+                return;
+            }
 
-                    const chartOptions = {
-                        responsive: true,
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: function(tooltipItem, data) {
-                                        const base = data.labels[tooltipItem.dataIndex];
-                                        const percentage = data.datasets[0].data[tooltipItem.dataIndex];
-                                        return `${base}: ${percentage}%`;
-                                    }
-                                }
-                            }
-                        }
-                    };
+            const efficiency = (Math.pow((pcrProductFinal / pcrProductInitial), (1 / cycles)) - 1) * 100;
+            document.getElementById('extra-tools-result').innerHTML = `<strong>PCR Efficiency:</strong> ${efficiency.toFixed(2)}%`;
 
-                    const ctx = document.getElementById("base-chart").getContext("2d");
-                    new Chart(ctx, {
-                        type: 'doughnut',
-                        data: chartData,
-                        options: chartOptions
-                    });
+            history.push({
+                type: 'efficiency-calculation',
+                pcrProductInitial,
+                pcrProductFinal,
+                cycles,
+                efficiency,
+                timestamp: new Date().toLocaleString()
+            });
+            updateHistoryList();
+        }
 
-                    document.getElementById("csv-button").style.display = "block";
-                    document.getElementById("pdf-button").style.display = "block";
+        function calculateConcentration() {
+            const absorbance = parseFloat(prompt('Enter absorbance at 260 nm:'));
+            const dilutionFactor = parseFloat(prompt('Enter dilution factor:'));
 
-                } catch (error) {
-                    console.error("An error occurred:", error);
-                    errorDiv.innerText = "Error: An unexpected problem occurred. Please check your input and try again.";
-                }
+            if (isNaN(absorbance) || isNaN(dilutionFactor)) {
+                document.getElementById('extra-tools-result').textContent = 'Please enter valid values.';
+                return;
+            }
+
+            const concentration = absorbance * dilutionFactor * 50;  // 50 µg/mL for dsDNA
+            document.getElementById('extra-tools-result').innerHTML = `<strong>DNA Concentration:</strong> ${concentration.toFixed(2)} µg/mL`;
+
+            history.push({
+                type: 'concentration-calculation',
+                absorbance,
+                dilutionFactor,
+                concentration,
+                timestamp: new Date().toLocaleString()
+            });
+            updateHistoryList();
+        }
+
+        function calculatePrimerTm() {
+            const primerSequence = prompt('Enter primer sequence:').trim().toUpperCase();
+
+            if (!isValidSequence(primerSequence, 'dna')) {
+                document.getElementById('extra-tools-result').textContent = 'Invalid primer sequence!';
+                return;
+            }
+
+            const tm = calculateMeltingTemperature(primerSequence);
+            document.getElementById('extra-tools-result').innerHTML = `<strong>Primer Tm:</strong> ${tm} °C`;
+
+            history.push({
+                type: 'primer-tm-calculation',
+                primerSequence,
+                tm,
+                timestamp: new Date().toLocaleString()
+            });
+            updateHistoryList();
+        }
+
+        function detectRestrictionSites() {
+            const sequence = prompt('Enter DNA sequence:').trim().toUpperCase();
+            const restrictionSites = prompt('Enter restriction sites (comma separated):').trim().toUpperCase().split(',');
+
+            if (!isValidSequence(sequence, 'dna')) {
+                document.getElementById('extra-tools-result').textContent = 'Invalid DNA sequence!';
+                return;
+            }
+
+            const sitesDetected = restrictionSites.filter(site => sequence.includes(site));
+            document.getElementById('extra-tools-result').innerHTML = `<strong>Restriction Sites Detected:</strong> ${sitesDetected.join(', ')}`;
+
+            history.push({
+                type: 'restriction-sites-detection',
+                sequence,
+                restrictionSites,
+                sitesDetected,
+                timestamp: new Date().toLocaleString()
+            });
+            updateHistoryList();
+        }
+
+        function updateHistoryList() {
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = '';
+            history.forEach((operation, index) => {
+                const historyItem = document.createElement('li');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <div>
+                        <p><strong>Type:</strong> ${operation.type}</p>
+                        <p>${operation.sequence ? `<strong>Sequence:</strong> ${operation.sequence}` : ''}</p>
+                        <p>${operation.mass ? `<strong>Molecular Mass:</strong> ${operation.mass} Da` : ''}</p>
+                        <p>${operation.gcContent ? `<strong>GC Content:</strong> ${operation.gcContent}%` : ''}</p>
+                        <p>${operation.tm ? `<strong>Melting Temperature:</strong> ${operation.tm} °C` : ''}</p>
+                        <p>${operation.complementarySequence ? `<strong>Complementary Sequence:</strong> ${operation.complementarySequence}` : ''}</p>
+                        <p>${operation.dimers ? `<strong>Dimers Count:</strong> ${JSON.stringify(operation.dimers)}` : ''}</p>
+                        <p>${operation.totalVolume ? `<strong>Total Volume:</strong> ${operation.totalVolume} µL` : ''}</p>
+                        <p>${operation.pcrProductInitial ? `<strong>Initial PCR Product:</strong> ${operation.pcrProductInitial}` : ''}</p>
+                        <p>${operation.pcrProductFinal ? `<strong>Final PCR Product:</strong> ${operation.pcrProductFinal}` : ''}</p>
+                        <p>${operation.cycles ? `<strong>Cycles:</strong> ${operation.cycles}` : ''}</p>
+                        <p>${operation.efficiency ? `<strong>Efficiency:</strong> ${operation.efficiency}%` : ''}</p>
+                        <p>${operation.absorbance ? `<strong>Absorbance:</strong> ${operation.absorbance}` : ''}</p>
+                        <p>${operation.dilutionFactor ? `<strong>Dilution Factor:</strong> ${operation.dilutionFactor}` : ''}</p>
+                        <p>${operation.concentration ? `<strong>Concentration:</strong> ${operation.concentration} µg/mL` : ''}</p>
+                        <p>${operation.primerSequence ? `<strong>Primer Sequence:</strong> ${operation.primerSequence}` : ''}</p>
+                        <p>${operation.restrictionSites ? `<strong>Restriction Sites:</strong> ${operation.restrictionSites.join(', ')}` : ''}</p>
+                        <p>${operation.sitesDetected ? `<strong>Sites Detected:</strong> ${operation.sitesDetected.join(', ')}` : ''}</p>
+                        <p><strong>Timestamp:</strong> ${operation.timestamp}</p>
+                        <button class="delete-button" onclick="deleteHistoryItem(${index})">Delete</button>
+                    </div>
+                `;
+                historyList.appendChild(historyItem);
             });
         }
 
-        document.getElementById("analyze-button").addEventListener("click", analyzeSequence);
-
-        function exportResultsToCSV() {
-            const resultDiv = document.getElementById("result");
-            const csvContent = "data:text/csv;charset=utf-8," + resultDiv.innerText.split('<br>').join('\n');
-            const downloadLink = document.createElement("a");
-            downloadLink.href = encodeURI(csvContent);
-            downloadLink.download = "results.csv";
-            downloadLink.click();
+        function deleteHistoryItem(index) {
+            history.splice(index, 1);
+            updateHistoryList();
         }
 
-        function generatePDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const resultDiv = document.getElementById("result");
+        function showTab(tab) {
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabs.forEach(t => t.classList.remove('tab-active'));
+            tabContents.forEach(tc => tc.classList.remove('tab-content-active'));
 
-            doc.text(resultDiv.innerText, 10, 10);
-            doc.save("results.pdf");
+            document.getElementById(`tab-${tab}`).classList.add('tab-active');
+            document.getElementById(`tab-content-${tab}`).classList.add('tab-content-active');
         }
+
+        document.getElementById('analyze-button').addEventListener('click', analyzeSequence);
+        document.getElementById('calculate-pcr-button').addEventListener('click', calculatePCR);
+        document.getElementById('calculate-efficiency-button').addEventListener('click', calculateEfficiency);
+        document.getElementById('calculate-concentration-button').addEventListener('click', calculateConcentration);
+        document.getElementById('calculate-tm-button').addEventListener('click', calculatePrimerTm);
+        document.getElementById('detect-restriction-sites-button').addEventListener('click', detectRestrictionSites);
     </script>
 </body>
 </html>
