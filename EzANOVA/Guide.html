@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Guide - EzANOVA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 90%;
+            margin: auto;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #007bff;
+        }
+        ul, ol {
+            text-align: left;
+            padding-left: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4e73df;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #2e59d9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to EzANOVA</h1>
+        <p>EzANOVA is a simple tool for conducting one-way ANOVA (Analysis of Variance) calculations. Follow these steps to perform an ANOVA analysis:</p>
+        
+        <h2>How to Use:</h2>
+        <ol>
+            <li><strong>Enter Data:</strong> Input the data for each group in the provided text fields. Separate values within each group by commas.</li>
+            <li><strong>Add or Remove Groups:</strong> Use the "Add Group" and "Remove Group" buttons to manage the number of groups for your analysis.</li>
+            <li><strong>Calculate ANOVA:</strong> Click on the "Calculate ANOVA" button to perform the ANOVA analysis based on the entered data.</li>
+            <li><strong>View Results:</strong> The ANOVA results, including F-statistic, p-value, and group means, will be displayed along with a bar chart representing the group means.</li>
+            <li><strong>Export Data:</strong> Optionally, you can export the ANOVA results to a CSV file by clicking the "Export to CSV" button.</li>
+        </ol>
+        
+        <button onclick="goBack()">Go Back</button>
+    </div>
+    
+    <script>
+        function goBack() {
+            window.location.href = "Launcher.html";
+        }
+    </script>
+</body>
+</html>
