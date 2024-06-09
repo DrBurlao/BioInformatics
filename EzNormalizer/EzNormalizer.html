@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EzNormalizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            padding: 20px;
+            max-width: 900px;
+            margin: auto;
+            background-color: #121212;
+            color: #ffffff;
+            border: 1px solid #333;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.7);
+            text-align: center;
+        }
+        h1 {
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+        .tab-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        .tab-buttons button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #ffffff;
+            background-color: #333;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            flex: 1;
+            margin: 0 5px;
+        }
+        .tab-buttons button:hover {
+            background-color: #555;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .input-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .input-area input, .input-area button, .input-area select {
+            padding: 10px;
+            margin: 5px 0;
+            width: 90%;
+            max-width: 300px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 5px;
+        }
+        .input-area input::placeholder {
+            color: #bbb;
+        }
+        .alert {
+            color: red;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #555;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #333;
+        }
+        td {
+            background-color: #222;
+        }
+        .btn-clear, .btn-export, .btn-clear-history {
+            background-color: #dc3545;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .btn-clear:hover {
+            background-color: #c82333;
+        }
+        .btn-export {
+            background-color: #007bff;
+        }
+        .btn-export:hover {
+            background-color: #0056b3;
+        }
+        .btn-clear-history:hover {
+            background-color: #c82333;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let data = [];
+        let history = [];
+
+        function showTab(tabName) {
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        function normalizeZScore(data) {
+            const results = data.map(d => parseFloat(d.result));
+            const mean = results.reduce((a, b) => a + b, 0) / results.length;
+            const stdDev = Math.sqrt(
+                results.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / results.length
+            );
+
+            return data.map(d => {
+                const zScore = (parseFloat(d.result) - mean) / stdDev;
+                return { ...d, normalizedResult: zScore.toFixed(2) };
+            });
+        }
+
+        function normalizeMinMax(data) {
+            const results = data.map(d => parseFloat(d.result));
+            const min = Math.min(...results);
+            const max = Math.max(...results);
+
+            return data.map(d => {
+                const minMaxNorm = (parseFloat(d.result) - min) / (max - min);
+                return { ...d, normalizedResult: minMaxNorm.toFixed(2) };
+            });
+        }
+
+        function normalizeMean(data) {
+            const results = data.map(d => parseFloat(d.result));
+            const mean = results.reduce((a, b) => a + b, 0) / results.length;
+
+            return data.map(d => {
+                const meanNorm = parseFloat(d.result) / mean;
+                return { ...d, normalizedResult: meanNorm.toFixed(2) };
+            });
+        }
+
+        function addData() {
+            const experiment = document.getElementById("experiment").value;
+            const sample = document.getElementById("sample").value;
+            const result = document.getElementById("result").value;
+
+            const alert = document.getElementById("alert");
+
+            if (!experiment || !sample || isNaN(parseFloat(result))) {
+                alert.innerText = "Please enter valid data.";
+                return;
+            }
+
+            alert.innerText = "";
+            
+            data.push({ experiment, sample, result });
+            history.push({ action: 'add', data: { experiment, sample, result } });
+            document.getElementById("experiment").value = '';
+            document.getElementById("sample").value = '';
+            document.getElementById("result").value = '';
+            
+            normalizeData();
+            updateHistory();
+        }
+
+        function loadFromCSV(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.trim().split("\n");
+                data = lines.map(line => {
+                    const [experiment, sample, result] = line.split(",");
+                    return { experiment, sample, result };
+                });
+                history.push({ action: 'load', data: [...data] });
+                normalizeData();
+                updateHistory();
+            };
+            reader.readAsText(file);
+        }
+
+        function removeData(index) {
+            const removed = data.splice(index, 1)[0];
+            history.push({ action: 'remove', data: removed });
+            normalizeData();
+            updateHistory();
+        }
+
+        function clearData() {
+            history.push({ action: 'clear', data: [...data] });
+            data = [];
+            showResults([]);
+            clearChart();
+            updateHistory();
+        }
+
+        function normalizeData() {
+            const method = document.getElementById("normalization-method").value;
+            let normalizedData;
+            switch (method) {
+                case 'z-score':
+                    normalizedData = normalizeZScore(data);
+                    break;
+                case 'min-max':
+                    normalizedData = normalizeMinMax(data);
+                    break;
+                case 'mean':
+                    normalizedData = normalizeMean(data);
+                    break;
+                default:
+                    normalizedData = data;
+            }
+            showResults(normalizedData);
+            drawChart(normalizedData);
+        }
+
+        function showResults(data) {
+            const table = document.getElementById("results");
+            table.innerHTML = "";
+
+            data.forEach((d, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${d.experiment}</td>
+                    <td>${d.sample}</td>
+                    <td>${d.result}</td>
+                    <td>${d.normalizedResult}</td>
+                    <td><button onclick="removeData(${index})"><i class="fa fa-trash"></i> Remove</button></td>
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        let chart;
+
+        function drawChart(data) {
+            const ctx = document.getElementById("chart").getContext("2d");
+            const labels = data.map(d => d.sample);
+            const results = data.map(d => parseFloat(d.result));
+            const normalizedResults = data.map(d => parseFloat(d.normalizedResult));
+
+            if (chart) {
+                chart.destroy(); // Destroy the previous chart before creating a new one
+            }
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Original Results',
+                            data: results,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Normalized Results',
+                            data: normalizedResults,
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                color: 'white'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: 'white'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: 'white',
+                                stepSize: 1,
+                                callback: function(value) { 
+                                    if (Number.isInteger(value)) {
+                                        return value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function clearChart() {
+            const ctx = document.getElementById("chart").getContext("2d");
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        }
+
+        function exportCSV() {
+            const csvContent = "data:text/csv;charset=utf-8,"
+                + "Experiment,Sample,Result,Normalized Result\n"
+                + data.map(d => `${d.experiment},${d.sample},${d.result},${d.normalizedResult}`).join("\n");
+
+            const link = document.createElement("a");
+            link.href = encodeURI(csvContent);
+            link.download = "normalized_results.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function updateHistory() {
+            const historyTable = document.getElementById("history");
+            historyTable.innerHTML = "";
+            history.forEach((entry, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${entry.action}</td>
+                    <td>${JSON.stringify(entry.data)}</td>
+                    <td><button onclick="removeHistory(${index})"><i class="fa fa-trash"></i> Remove</button></td>
+                `;
+                historyTable.appendChild(row);
+            });
+        }
+
+        function removeHistory(index) {
+            history.splice(index, 1);
+            updateHistory();
+        }
+
+        function clearHistory() {
+            history = [];
+            updateHistory();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            showTab('tab1');
+        });
+    </script>
+</head>
+<body>
+    <h1>EzNormalizer</h1>
+    <div id="alert" class="alert"></div>
+    
+    <div class="tab-buttons">
+        <button onclick="showTab('tab1')"><i class="fa fa-plus"></i> Add Data</button>
+        <button onclick="showTab('tab2')"><i class="fa fa-upload"></i> Upload CSV</button>
+        <button onclick="showTab('tab3')"><i class="fa fa-table"></i> View Results</button>
+        <button onclick="showTab('tab4')"><i class="fa fa-chart-bar"></i> View Chart</button>
+        <button onclick="showTab('tab5')"><i class="fa fa-history"></i> History</button>
+    </div>
+    
+    <div id="tab1" class="tab-content">
+        <div class="input-area">
+            <input type="text" id="experiment" placeholder="Experiment" />
+            <input type="text" id="sample" placeholder="Sample" />
+            <input type="number" id="result" placeholder="Result" />
+            <select id="normalization-method">
+                <option value="z-score">Z-Score</option>
+                <option value="min-max">Min-Max</option>
+                <option value="mean">Mean</option>
+            </select>
+            <button onclick="addData()"><i class="fa fa-plus"></i> Add</button>
+        </div>
+    </div>
+    
+    <div id="tab2" class="tab-content">
+        <div class="input-area">
+            <input type="file" accept=".csv" onchange="loadFromCSV(event)" />
+            <p>Upload a CSV file with the format: experiment, sample, result</p>
+        </div>
+    </div>
+    
+    <div id="tab3" class="tab-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>Experiment</th>
+                    <th>Sample</th>
+                    <th>Result</th>
+                    <th>Normalized Result</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="results">
+            </tbody>
+        </table>
+        <button class="btn-clear" onclick="clearData()"><i class="fa fa-trash"></i> Clear All Data</button>
+        <button class="btn-export" onclick="exportCSV()"><i class="fa fa-file-csv"></i> Export as CSV</button>
+    </div>
+    
+    <div id="tab4" class="tab-content">
+        <h2>Results Chart</h2>
+        <canvas id="chart" width="400" height="200"></canvas>
+    </div>
+    
+    <div id="tab5" class="tab-content">
+        <h2>History</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Data</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="history">
+            </tbody>
+        </table>
+        <button class="btn-clear-history" onclick="clearHistory()"><i class="fa fa-trash"></i> Clear History</button>
+    </div>
+</body>
+</html>
