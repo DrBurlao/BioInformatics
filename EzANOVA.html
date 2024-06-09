@@ -2,42 +2,92 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>EzANOVA - BurlaSoft</title>
+    <title>EzANOVA - Analysis of Variance</title>
     <style>
-        #groups input {
-            width: 300px;
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #4e73df;
+        }
+        input {
+            width: 100%;
             padding: 10px;
             margin-bottom: 10px;
             border-radius: 5px;
-            border: 1px solid #ccc;
+            border: 1px solid #444;
+            background-color: #333;
+            color: #e0e0e0;
         }
         button {
-            padding: 10px;
+            padding: 10px 15px;
             border: none;
             border-radius: 5px;
             background-color: #4e73df;
             color: white;
             cursor: pointer;
+            margin-right: 10px;
         }
         button:hover {
             background-color: #2e59d9;
         }
-        #results {
-            padding-top: 10px;
-            margin-top: 10px;
-            border-top: 1px solid #ccc;
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #444;
         }
-        #chart {
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        .tab.active {
+            background-color: #4e73df;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .history-item {
+            border-bottom: 1px solid #444;
+            padding: 10px 0;
+        }
+        canvas, #boxplot, #histogram, #scatterplot {
             margin-top: 20px;
-            width: 600px;
+            width: 100%;
             height: 400px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script> <!-- For p-value -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script> <!-- For p-value calculations -->
     <script>
         function mean(arr) {
             return arr.reduce((a, b) => a + b, 0) / arr.length;
+        }
+
+        function median(arr) {
+            const sorted = arr.slice().sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        }
+
+        function variance(arr) {
+            const meanVal = mean(arr);
+            return arr.reduce((a, b) => a + Math.pow(b - meanVal, 2), 0) / (arr.length - 1);
+        }
+
+        function standardDeviation(arr) {
+            return Math.sqrt(variance(arr));
         }
 
         function sumOfSquares(arr, mean) {
@@ -47,7 +97,7 @@
         function addGroup() {
             const groupContainer = document.getElementById("groups");
             const newGroup = document.createElement("div");
-            newGroup.innerHTML = `<input type="text" placeholder="Group data separated by commas" aria-label="Group data" />`;
+            newGroup.innerHTML = `<input type="text" placeholder="Group data separated by commas" />`;
             groupContainer.appendChild(newGroup);
         }
 
@@ -58,12 +108,12 @@
             }
         }
 
-        function exportToCSV(data, filename) {
-            const csvContent = "data:text/csv;charset=utf-8," + data.map(row => row.join(",")).join("\n");
-
-            const encodedUri = encodeURI(csvContent);
+        function exportToTXT(data, filename) {
+            const txtContent = data.map(row => row.join("\t")).join("\n");
+            const blob = new Blob([txtContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
+            link.setAttribute("href", url);
             link.setAttribute("download", filename);
             document.body.appendChild(link);
             link.click();
@@ -86,7 +136,7 @@
             const n = inputs.reduce((total, group) => total + group.length, 0);
 
             if (k < 2 || n < 3) {
-                alert("You need at least two groups and at least three values in total.");
+                alert("At least two groups and a total of three values are required.");
                 return;
             }
 
@@ -108,7 +158,9 @@
 
             const fStat = msBetween / msWithin;
 
-            const pValue = 1 - jStat.centralF.cdf(fStat, dfBetween, dfWithin); // For p-value
+            const pValue = 1 - jStat.centralF.cdf(fStat, dfBetween, dfWithin); // P-value using jStat
+
+            const effectSize = ssBetween / (ssBetween + ssWithin); // Eta squared
 
             const resultsDiv = document.getElementById("results");
             resultsDiv.innerHTML = `
@@ -121,11 +173,17 @@
                 <p>Mean Squares Within Groups (MSW): ${msWithin.toFixed(2)}</p>
                 <p>Degrees of Freedom Between Groups (dfBetween): ${dfBetween}</p>
                 <p>Degrees of Freedom Within Groups (dfWithin): ${dfWithin}</p>
+                <p>Effect Size (Eta Squared): ${effectSize.toFixed(4)}</p>
                 <p>Group Means: ${groupMeans.map((mean, idx) => `Group ${idx + 1}: ${mean.toFixed(2)}`).join(", ")}</p>
-                <button onclick="exportResults('${fStat.toFixed(2)}', '${pValue.toFixed(6)}', '${ssBetween.toFixed(2)}', '${ssWithin.toFixed(2)}', '${msBetween.toFixed(2)}', '${msWithin.toFixed(2)}', '${dfBetween}', '${dfWithin}', groupMeans.map(m => m.toFixed(2)) )">Export to CSV</button>
+                <button onclick="exportResults('${fStat.toFixed(2)}', '${pValue.toFixed(6)}', '${ssBetween.toFixed(2)}', '${ssWithin.toFixed(2)}', '${msBetween.toFixed(2)}', '${msWithin.toFixed(2)}', '${dfBetween}', '${dfWithin}', '${effectSize.toFixed(4)}', groupMeans.map(m => m.toFixed(2)) )">Export to TXT</button>
             `;
 
             drawChart(groupMeans);
+            drawBoxPlot(inputs);
+            drawHistogram(inputs);
+            drawScatterPlot(inputs);
+
+            addToHistory(fStat, pValue, ssBetween, ssWithin, msBetween, msWithin, dfBetween, dfWithin, effectSize, groupMeans);
         }
 
         function drawChart(groupMeans) {
@@ -155,39 +213,160 @@
             });
         }
 
-        function exportResults(fStat, pValue, ssBetween, ssWithin, msBetween, msWithin, dfBetween, dfWithin, groupMeans) {
-            const csvData = [
-                ["F-statistic", fStat],
-                ["p-Value", pValue],
-                ["SSB", ssBetween],
-                ["SSW", ssWithin],
-                ["MSB", msBetween],
-                ["MSW", msWithin],
-                ["dfBetween", dfBetween],
-                ["dfWithin", dfWithin],
-                ["Group Means", groupMeans.map((m, idx) => `Group ${idx + 1}: ${m}`).join(", ")],
-            ];
-
-            exportToCSV(csvData, "anova_results.csv");
+        function drawBoxPlot(inputs) {
+            const data = inputs.map((group, idx) => ({
+                y: group,
+                type: 'box',
+                name: `Group ${idx + 1}`
+            }));
+            Plotly.newPlot('boxplot', data);
         }
+
+        function drawHistogram(inputs) {
+            const data = inputs.map((group, idx) => ({
+                x: group,
+                type: 'histogram',
+                name: `Group ${idx + 1}`,
+                opacity: 0.75
+            }));
+            Plotly.newPlot('histogram', data, { barmode: 'overlay' });
+        }
+
+        function drawScatterPlot(inputs) {
+            const data = inputs.map((group, idx) => ({
+                x: Array(group.length).fill(`Group ${idx + 1}`),
+                y: group,
+                mode: 'markers',
+                type: 'scatter',
+                name: `Group ${idx + 1}`
+            }));
+            Plotly.newPlot('scatterplot', data);
+        }
+
+        function addToHistory(fStat, pValue, ssBetween, ssWithin, msBetween, msWithin, dfBetween, dfWithin, effectSize, groupMeans) {
+            const historyDiv = document.getElementById("history");
+            const historyItem = document.createElement("div");
+            historyItem.className = "history-item";
+            historyItem.innerHTML = `
+                <p>F-statistic: ${fStat.toFixed(2)}</p>
+                <p>p-Value: ${pValue.toFixed(6)}</p>
+                <p>SSB: ${ssBetween.toFixed(2)}, SSW: ${ssWithin.toFixed(2)}</p>
+                <p>MSB: ${msBetween.toFixed(2)}, MSW: ${msWithin.toFixed(2)}</p>
+                <p>dfBetween: ${dfBetween}, dfWithin: ${dfWithin}</p>
+                <p>Effect Size: ${effectSize.toFixed(4)}</p>
+                <p>Group Means: ${groupMeans.map((mean, idx) => `Group ${idx + 1}: ${mean.toFixed(2)}`).join(", ")}</p>
+                <button onclick="deleteHistoryItem(this)">Delete</button>
+            `;
+            historyDiv.appendChild(historyItem);
+
+            saveHistory();
+        }
+
+        function saveHistory() {
+            const historyDiv = document.getElementById("history");
+            const historyItems = Array.from(historyDiv.getElementsByClassName("history-item")).map(item => item.innerHTML);
+            localStorage.setItem("anovaHistory", JSON.stringify(historyItems));
+        }
+
+        function loadHistory() {
+            const historyDiv = document.getElementById("history");
+            const historyItems = JSON.parse(localStorage.getItem("anovaHistory") || "[]");
+            historyItems.forEach(itemHTML => {
+                const historyItem = document.createElement("div");
+                historyItem.className = "history-item";
+                historyItem.innerHTML = itemHTML;
+                historyDiv.appendChild(historyItem);
+            });
+        }
+
+        function deleteHistoryItem(button) {
+            const historyItem = button.parentElement;
+            historyItem.parentElement.removeChild(historyItem);
+            saveHistory();
+        }
+
+        function loadFromFile() {
+            document.getElementById("fileInput").click();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    const groups = content.trim().split('\n').map(line => line.split('\t').map(Number));
+                    const groupContainer = document.getElementById("groups");
+                    groupContainer.innerHTML = '';
+                    groups.forEach(group => {
+                        const newGroup = document.createElement("div");
+                        newGroup.innerHTML = `<input type="text" value="${group.join(',')}" />`;
+                        groupContainer.appendChild(newGroup);
+                    });
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", loadHistory);
+
     </script>
 </head>
 <body>
-    <h1>EzANOVA</h1>
-    <p>Enter data for each group separated by commas:</p>
-
-    <div id="groups">
-        <div>
-            <input type="text" placeholder="Group 1 data" aria-label="Group 1 data" />
+    <div class="container">
+        <h1>ANOVA - Analysis of Variance</h1>
+        <div class="tab-container">
+            <div class="tab active" onclick="showTab(1)">ANOVA</div>
+            <div class="tab" onclick="showTab(2)">History</div>
+            <div class="tab" onclick="showTab(3)">Import Data</div>
+        </div>
+        <div id="tab1" class="tab-content active">
+            <p>Enter data for each group separated by commas:</p>
+            <div id="groups">
+                <div>
+                    <input type="text" placeholder="Group 1 data" />
+                </div>
+            </div>
+            <br>
+            <button onclick="addGroup()">Add Group</button>
+            <button onclick="removeGroup()">Remove Group</button>
+            <br><br>
+            <button onclick="calculateAnova()">Calculate ANOVA</button>
+            <div id="results"></div>
+            <canvas id="chart"></canvas>
+            <div id="boxplot"></div>
+            <div id="histogram"></div>
+            <div id="scatterplot"></div>
+        </div>
+        <div id="tab2" class="tab-content">
+            <h2>History</h2>
+            <div id="history"></div>
+        </div>
+        <div id="tab3" class="tab-content">
+            <h2>Import Data</h2>
+            <input type="file" id="fileInput" accept=".txt" style="display:none;" onchange="handleFileSelect(event)">
+            <button onclick="loadFromFile()">Import Data from TXT File</button>
         </div>
     </div>
-    <br>
-    <button onclick="addGroup()">Add Group</button>
-    <button onclick="removeGroup()">Remove Group</button>
-    <br><br>
-    <button onclick="calculateAnova()">Calculate ANOVA</button>
-
-    <div id="results"></div>
-    <canvas id="chart"></canvas>
+    <script>
+        function showTab(tabNumber) {
+            const tabs = document.querySelectorAll(".tab");
+            const tabContents = document.querySelectorAll(".tab-content");
+            tabs.forEach((tab, index) => {
+                if (index === tabNumber - 1) {
+                    tab.classList.add("active");
+                } else {
+                    tab.classList.remove("active");
+                }
+            });
+            tabContents.forEach((content, index) => {
+                if (index === tabNumber - 1) {
+                    content.classList.add("active");
+                } else {
+                    content.classList.remove("active");
+                }
+            });
+        }
+    </script>
 </body>
 </html>
