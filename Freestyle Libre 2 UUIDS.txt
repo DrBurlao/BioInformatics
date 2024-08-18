@@ -1,0 +1,29 @@
+UUIDS
+Generic Attribute (system)0x1801
+	Servide Changed 0x2A05
+
+Generic Access (system) 0x1800
+	Device Name 0x2A00
+	Appearance 0x2A01
+	Central Address Resolution 0x2AA6
+	
+Heart Rate (Predefined)
+	Heart Rate Measurement 0x2A37
+		Client charasterictic configuration (0x2902)
+	Body Sensor Location 0x2A38
+	Hear Rate Control Point 0x2A39
+
+Unkown Service 0000aaa-0-0000-1000-8000-aabbccddeeff
+	Unkown Characteristic 0000aaa1-0000-1000-8000-aabbccddeeff
+	Client characterstic Configuration 0x2902
+	Unkown Descriptor 0000aab0-0000-1000-8000-aabbccddeeff
+	Characteristic User Description 0x2901
+	Characteristic Presentation Format 0x2904
+	
+	Uknown Characteristic 0000aaa2-0000-1000-8000-aabbccddeeff
+		Client Characteristic Configuration 0x2902
+		
+User Data 0x181C
+	First Name 0x2A8A
+	Last Name 0x2A90
+	Gender	0x2A8C
