@@ -1,0 +1,78 @@
+FreeStyle Libre 2 UUID LIST:
+
+Generic Attribute
+	UUID: 0x1801 (primary service)
+	
+		Service Changed
+		UUID: 0x2A05 Propieties INDICATE
+		Descriptors:
+		Client charasteristic Configuration
+		UUID: 0x2902
+		
+		
+		
+Generic Access
+	UUID: 0x1800 (primary service)
+	
+		Device Name
+		UUID: 0x2A00 Propieties READ
+		
+		Appearance
+		UUID: 0x2A01 Propieties READ
+		
+		Software Revision String
+		UUID 0x2A28 Propieties READ
+		
+		Manufacturer Name String
+		UUID: 0x2A29 Propieties READ
+		
+		
+		
+Device Information
+	UUID: 0x180A (primary service)
+	
+		System ID
+		UUID: 0x2A23 Propieties READ
+		
+		Model Number String
+		UUID: 0x2A24 Propieties READ
+		
+		Serial Number String
+		UUID: 0x2A25 Propieties READ
+		
+		Firmware Revision String
+		UUID: 0x2A26 Propieties READ
+		
+		Hardware Revision String
+		UUID: 0x2A27 Propieties READ
+		
+		Software Revision String
+		UUID: 0x2A28 Propieties READ
+		
+		Manufacturer Name String
+		UUID: 0x2A29 Propieties READ
+		
+		IEEE 11073-20601 Regulatory Certification Data
+		UUID: 0x2A2A Propieties READ
+		
+		PnpID
+		UUID: 0x2A50 Propieties READ
+		
+		
+		
+Unkown Service
+	UUID: 0xFDE3 (primary service)
+	
+		Unknown Characteristic:
+		UUID: 0xF001 Propieties NOTIFY, WRITE
+		Descriptors:
+		Client Characteristic Configuration
+		UUID: 0x2902
+		
+		Unknown Characteristic:
+		UUID: 0xF002 Propieties NOTIFY
+		Descriptors:
+		Client Characteristic Configuration
+		UUID: 0x2902
+		
+	
