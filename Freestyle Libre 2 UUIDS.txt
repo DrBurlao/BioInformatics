@@ -27,3 +27,19 @@ User Data 0x181C
 	First Name 0x2A8A
 	Last Name 0x2A90
 	Gender	0x2A8C
+
+
+
+
+
+Sensor:Device name:
+ABBOTT<SERIAL-NUMBER>
+
+Device address:
+<48BIT-UNIQUE-ADDRESS>
+
+Service UUID:
+0xFDE3 Abbott Diabetes Care
+
+Vendor UUID:
+0x03BB Abbott Diabetes Care
